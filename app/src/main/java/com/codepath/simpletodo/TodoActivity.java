@@ -1,5 +1,6 @@
 package com.codepath.simpletodo;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -43,6 +44,16 @@ public class TodoActivity extends AppCompatActivity {
                 return true;
             }
         });
+
+        lvItems.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                final Intent i = new Intent(TodoActivity.this, EditItemActivity.class);
+                i.putExtra("text", items.get(position));
+                i.putExtra("position",position);
+                startActivityForResult(i, 20);
+            }
+        });
     }
 
     public void onAddItem(View view) {
@@ -52,6 +63,22 @@ public class TodoActivity extends AppCompatActivity {
         editText.setText("");
         writeItems();
     }
+
+    // ActivityOne.java, time to handle the result of the sub-activity
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // REQUEST_CODE is defined above
+        if (resultCode == RESULT_OK && requestCode == 20) {
+            // Extract name value from result extras
+            String newText = data.getExtras().getString("text");
+            int position = data.getExtras().getInt("position");
+
+            items.set(position,newText);
+            itemsAdapter.notifyDataSetChanged();
+            writeItems();
+        }
+    }
+
 
     private void readItems(){
         final File filesDir = getFilesDir();
