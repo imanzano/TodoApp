@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 
@@ -19,8 +18,8 @@ import static nl.qbusict.cupboard.CupboardFactory.cupboard;
 
 public class TodoActivity extends AppCompatActivity {
 
-    private ArrayList<String> items;
-    private ArrayAdapter<String> itemsAdapter;
+    private ArrayList<TodoItem> items;
+    private TodoItemAdapter itemsAdapter;
     private ListView lvItems;
 
     static SQLiteDatabase db;
@@ -34,7 +33,7 @@ public class TodoActivity extends AppCompatActivity {
         lvItems = (ListView)findViewById(R.id.lvItems);
         items = new ArrayList<>();
         readItems();
-        itemsAdapter = new ArrayAdapter<>(this,android.R.layout.simple_list_item_1,items);
+        itemsAdapter = new TodoItemAdapter(this,items);
         lvItems.setAdapter(itemsAdapter);
 
         setupListViewListener();
@@ -55,7 +54,7 @@ public class TodoActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 final Intent i = new Intent(TodoActivity.this, EditItemActivity.class);
-                i.putExtra("text", items.get(position));
+                i.putExtra("text", items.get(position).text);
                 i.putExtra("position",position);
                 startActivityForResult(i, 20);
             }
@@ -65,7 +64,9 @@ public class TodoActivity extends AppCompatActivity {
     public void onAddItem(View view) {
         final EditText editText = (EditText)findViewById(R.id.etNewItem);
         final String itemText = editText.getText().toString();
-        itemsAdapter.add(itemText);
+        TodoItem object = new TodoItem();
+        object.text = itemText;
+        itemsAdapter.add(object);
         editText.setText("");
         writeItems();
     }
@@ -78,8 +79,9 @@ public class TodoActivity extends AppCompatActivity {
             // Extract name value from result extras
             String newText = data.getExtras().getString("text");
             int position = data.getExtras().getInt("position");
-
-            items.set(position,newText);
+            TodoItem todoItem = new TodoItem();
+            todoItem.text= newText;
+            items.set(position,todoItem);
             itemsAdapter.notifyDataSetChanged();
             writeItems();
         }
@@ -92,17 +94,16 @@ public class TodoActivity extends AppCompatActivity {
         QueryResultIterable<TodoItem> iterate = cupboard().withCursor(cursor).iterate(TodoItem.class);
         items = new ArrayList<>();
         for (TodoItem todoItem : iterate) {
-            items.add(todoItem.text);
+            items.add(todoItem);
         }
     }
 
     private void writeItems(){
         cupboard().withDatabase(db).delete(TodoItem.class,"");
 
-        for (final String item : items) {
-            final TodoItem todoItem = new TodoItem();
-            todoItem.text = item;
-            cupboard().withDatabase(db).put(todoItem);
+        for (final TodoItem item : items) {
+
+            cupboard().withDatabase(db).put(item);
         }
     }
 }
