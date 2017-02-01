@@ -1,6 +1,8 @@
 package com.codepath.simpletodo;
 
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -9,11 +11,11 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 
-import org.apache.commons.io.FileUtils;
-
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
+
+import nl.qbusict.cupboard.QueryResultIterable;
+
+import static nl.qbusict.cupboard.CupboardFactory.cupboard;
 
 public class TodoActivity extends AppCompatActivity {
 
@@ -21,10 +23,14 @@ public class TodoActivity extends AppCompatActivity {
     private ArrayAdapter<String> itemsAdapter;
     private ListView lvItems;
 
+    static SQLiteDatabase db;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_todo);
+        final TodoDatabaseHelper dbHelper = new TodoDatabaseHelper(this);
+        db = dbHelper.getWritableDatabase();
         lvItems = (ListView)findViewById(R.id.lvItems);
         items = new ArrayList<>();
         readItems();
@@ -81,24 +87,22 @@ public class TodoActivity extends AppCompatActivity {
 
 
     private void readItems(){
-        final File filesDir = getFilesDir();
-        final File todoFile = new File(filesDir,"todo.txt");
-        try {
-            items = new ArrayList<>(FileUtils.readLines(todoFile));
-        } catch (final IOException e)
-        {
-            items = new ArrayList<>();
+
+        final Cursor cursor = cupboard().withDatabase(db).query(TodoItem.class).getCursor();
+        QueryResultIterable<TodoItem> iterate = cupboard().withCursor(cursor).iterate(TodoItem.class);
+        items = new ArrayList<>();
+        for (TodoItem todoItem : iterate) {
+            items.add(todoItem.text);
         }
     }
 
     private void writeItems(){
-        final File filesDir = getFilesDir();
-        final File todoFile = new File(filesDir,"todo.txt");
-        try {
-            FileUtils.writeLines(todoFile,items);
-        } catch (final IOException e)
-        {
-            e.printStackTrace();
+        cupboard().withDatabase(db).delete(TodoItem.class,"");
+
+        for (final String item : items) {
+            final TodoItem todoItem = new TodoItem();
+            todoItem.text = item;
+            cupboard().withDatabase(db).put(todoItem);
         }
     }
 }
